@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SSLG Voting System — Styled & Working</title>
+  <style>
+    /* === Theme & Layout === */
+    :root{
+      --accent:#2563eb;
+      --accent-dark:#1e40af;
+      --muted:#6b7280;
+      --bg:#f1f5f9;
+      --card:#ffffff;
+      --radius:14px;
+      --shadow:0 8px 24px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:#0f172a}
+    .container{max-width:1100px;margin:32px auto;padding:20px}
+    header{display:flex;gap:18px;align-items:center;margin-bottom:18px}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#93c5fd,#bfdbfe);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent-dark);box-shadow:var(--shadow)}
+    h1{margin:0;font-size:1.5rem;color:var(--accent-dark)}
+    p.lead{margin:6px 0 0;color:var(--muted)}
+
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid #e6eef8;padding-bottom:12px}
+
+    .positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+    .position{border-radius:12px;padding:12px;border:1px solid #eef2ff;background:linear-gradient(180deg,#fff,#fbfdff)}
+    .position h3{margin:0 0 8px;color:var(--accent-dark)}
+
+    .candidates{display:flex;flex-direction:column;gap:10px}
+    label.candidate{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;border:1px solid #eef2ff;background:#fff;cursor:pointer;transition:transform .08s,box-shadow .12s}
+    label.candidate:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+    input[type=radio]{accent-color:var(--accent);width:18px;height:18px}
+    .avatar{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#dbeafe,#eff6ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+    .meta .name{font-weight:700}
+    .meta .info{font-size:0.86rem;color:var(--muted)}
+
+    .actions{display:flex;gap:12px;align-items:center;margin-top:14px}
+    button.btn{background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+    button.btn.secondary{background:#fff;color:var(--accent-dark);border:1px solid #dbeafe}
+    button.btn:active{transform:translateY(1px)}
+
+    .results{margin-top:12px}
+    .results h2{margin:0 0 6px;color:var(--accent-dark)}
+    .result-row{margin-top:8px}
+    .bar{height:14px;background:#eef2ff;border-radius:8px;overflow:hidden}
+    .fill{height:100%;width:0;transition:width .6s ease}
+
+    .note{color:var(--muted);font-size:0.95rem}
+    footer{margin-top:18px;color:var(--muted);text-align:center}
+
+    @media(max-width:600px){header{flex-direction:column;align-items:center;text-align:center}.topbar{flex-direction:column;gap:8px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">SSLG</div>
+      <div>
+        <h1>SSLG Voting System</h1>
+        <p class="lead">Select one candidate per position. This demo stores votes locally in your browser for testing.</p>
+      </div>
+    </header>
+
+    <div class="card" id="votingCard">
+      <div class="topbar">
+        <div><strong>Election:</strong> SSLG Officers — School Year 2025-2026</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="note" id="votedNote"></div>
+          <button class="btn secondary" id="viewResultsBtn">View Results</button>
+          <button class="btn" id="resetBtn">Admin Reset</button>
+        </div>
+      </div>
+
+      <div class="positions" id="positionsContainer">
+        <!-- positions injected here -->
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="submitVotes">Submit Votes</button>
+        <button class="btn secondary" id="clearSelection">Clear Selection</button>
+        <div style="margin-left:auto;color:var(--muted)">Local demo — no server required</div>
+      </div>
+    </div>
+
+    <div class="card" id="resultsCard" style="display:none">
+      <h2>Live Results</h2>
+      <div id="resultsContainer"></div>
+    </div>
+
+    <footer>Tip: Admin password for demo reset is <strong>admin123</strong>. Use Admin Reset to clear local votes for testing.</footer>
+  </div>
+
+  <script>
+    // --- Configuration: edit names here ---
+    const positionsData = [
+      { id:'president', title:'President', candidates:['Alex Navarro','Bianca Cruz','Carlos Reyes'] },
+      { id:'vice_president', title:'Vice President', candidates:['Dianne Santos','Ethan Morales','Freya Lim'] },
+      { id:'secretary', title:'Secretary', candidates:['Grace Tan','Hector Ramos'] },
+      { id:'treasurer', title:'Treasurer', candidates:['Isaac Delgado','Janelle Ong'] },
+      { id:'auditor', title:'Auditor', candidates:['Kevin Sy','Lara Puno'] },
+      { id:'pro', title:'Public Relations Officer', candidates:['Maya Cruz','Noah Lim'] },
+      { id:'grade7_rep', title:'Grade 7 Representative', candidates:['Olivia A.','Pablo V.'] },
+      { id:'grade8_rep', title:'Grade 8 Representative', candidates:['Quinn S.','Rhea B.'] },
+      { id:'grade9_rep', title:'Grade 9 Representative', candidates:['Sean D.','Tara F.'] },
+      { id:'grade10_rep', title:'Grade 10 Representative', candidates:['Umar N.','Violet G.'] }
+    ];
+    // --------------------------------------
+
+    const LS_KEY = 'sslg_votes_2025_v2';
+    const CAST_KEY = 'sslg_cast_2025_v2';
+
+    function initVotes(){
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) return JSON.parse(raw);
+      const obj = {};
+      positionsData.forEach(p=>{ obj[p.id] = {}; p.candidates.forEach(c=> obj[p.id][c]=0); });
+      localStorage.setItem(LS_KEY, JSON.stringify(obj));
+      return obj;
+    }
+
+    function loadVotes(){ return JSON.parse(localStorage.getItem(LS_KEY) || JSON.stringify(initVotes())); }
+    function loadCast(){ return JSON.parse(localStorage.getItem(CAST_KEY) || '{}'); }
+
+    // Utility: initials
+    function initials(name){
+      return name.split(' ').map(s=>s[0]||'').slice(0,2).join('').toUpperCase();
+    }
+
+    // Render voting positions
+    function renderPositions(){
+      const container = document.getElementById('positionsContainer'); container.innerHTML='';
+      const cast = loadCast();
+      positionsData.forEach(pos=>{
+        const box = document.createElement('div'); box.className='position';
+        const title = document.createElement('h3'); title.textContent = pos.title; box.appendChild(title);
+        const list = document.createElement('div'); list.className='candidates';
+
+        pos.candidates.forEach((cand,idx)=>{
+          const id = `${pos.id}__${idx}`;
+          const label = document.createElement('label'); label.className='candidate'; label.setAttribute('for',id);
+
+          const radio = document.createElement('input'); radio.type='radio'; radio.name=pos.id; radio.id=id; radio.value=cand;
+          if (cast[pos.id]) radio.disabled = true;
+
+          const avatar = document.createElement('div'); avatar.className='avatar'; avatar.textContent = initials(cand);
+          const meta = document.createElement('div'); meta.className='meta';
+          const nameEl = document.createElement('div'); nameEl.className='name'; nameEl.textContent = cand;
+          const info = document.createElement('div'); info.className='info'; info.textContent = pos.title + ' Candidate';
+          meta.appendChild(nameEl); meta.appendChild(info);
+
+          label.appendChild(radio);
+          label.appendChild(avatar);
+          label.appendChild(meta);
+          list.appendChild(label);
+        });
+
+        box.appendChild(list);
+
+        if (cast[pos.id]){
+          const note = document.createElement('div'); note.className='note'; note.style.marginTop='8px'; note.textContent = `You already voted as: ${cast[pos.id]}`;
+          box.appendChild(note);
+        }
+
+        container.appendChild(box);
+      });
+      updateVotedNote();
+    }
+
+    function updateVotedNote(){
+      const cast = loadCast(); const el = document.getElementById('votedNote'); el.textContent = Object.keys(cast).length>0 ? 'You have cast vote(s).' : '';
+    }
+
+    // Submit votes
+    document.getElementById('submitVotes').addEventListener('click', ()=>{
+      const votes = loadVotes(); const cast = loadCast(); let changed=false; const submitted=[];
+      positionsData.forEach(pos=>{
+        if (cast[pos.id]) return; // already cast for this pos in this browser
+        const sel = document.querySelector(`input[name="${pos.id}"]:checked`);
+        if (sel){ votes[pos.id][sel.value] = (votes[pos.id][sel.value]||0) + 1; cast[pos.id] = sel.value; changed=true; submitted.push({pos:pos.title, cand:sel.value}); }
+      });
+      if (!changed){ alert('No new selections to submit. Make sure you selected candidates or you may have already voted for these positions in this browser.'); return; }
+      localStorage.setItem(LS_KEY, JSON.stringify(votes)); localStorage.setItem(CAST_KEY, JSON.stringify(cast));
+      // Disable submitted radios immediately to prevent re-submission in same session
+      renderPositions(); renderResults(); document.getElementById('resultsCard').style.display='block';
+      alert('Thanks! Your vote(s) recorded for: ' + submitted.map(s=>`${s.pos}: ${s.cand}`).join('; '));
+    });
+
+    // Clear selection (doesn't clear stored votes)
+    document.getElementById('clearSelection').addEventListener('click', ()=>{
+      positionsData.forEach(pos=>{ const els = document.querySelectorAll(`input[name="${pos.id}"]`); els.forEach(i=>i.checked=false); });
+    });
+
+    // Render results
+    function renderResults(){
+      const votes = loadVotes(); const container = document.getElementById('resultsContainer'); container.innerHTML='';
+      positionsData.forEach(pos=>{
+        const wrap = document.createElement('div');
+        const title = document.createElement('h3'); title.textContent = pos.title; title.style.margin='0'; title.style.fontSize='1rem'; wrap.appendChild(title);
+
+        const totals = Object.values(votes[pos.id]||{}).reduce((a,b)=>a+b,0);
+        pos.candidates.forEach(cand=>{
+          const row = document.createElement('div'); row.className='result-row';
+          const label = document.createElement('div'); label.style.display='flex'; label.style.justifyContent='space-between';
+          label.innerHTML = `<div style="font-weight:600">${cand}</div><div style="color:var(--muted)">${votes[pos.id][cand]||0} vote(s)</div>`;
+          row.appendChild(label);
+
+          const bar = document.createElement('div'); bar.className='bar';
+          const fill = document.createElement('div'); fill.className='fill';
+          const pct = totals === 0 ? 0 : Math.round((votes[pos.id][cand] / totals) * 100);
+          // set width after appending so transition animates
+          bar.appendChild(fill); row.appendChild(bar);
+          wrap.appendChild(row);
+
+          // animate width slightly delayed to allow DOM paint
+          setTimeout(()=>{ fill.style.width = pct + '%'; fill.style.background = `linear-gradient(90deg, var(--accent), #7c3aed)`; }, 50);
+        });
+
+        container.appendChild(wrap);
+      });
+    }
+
+    // Admin reset
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      const pw = prompt('Admin password (demo):');
+      if (pw === null) return;
+      if (pw === 'admin123'){
+        if (!confirm('This will CLEAR all votes and cast records in this browser. Proceed?')) return;
+        const obj = {};
+        positionsData.forEach(p=>{ obj[p.id] = {}; p.candidates.forEach(c=> obj[p.id][c]=0); });
+        localStorage.setItem(LS_KEY, JSON.stringify(obj)); localStorage.removeItem(CAST_KEY);
+        alert('Votes cleared.'); renderPositions(); renderResults(); document.getElementById('resultsCard').style.display='none';
+      } else {
+        alert('Wrong password.');
+      }
+    });
+
+    // View results
+    document.getElementById('viewResultsBtn').addEventListener('click', ()=>{
+      renderResults(); const card = document.getElementById('resultsCard'); card.style.display = card.style.display === 'block' ? 'none' : 'block';
+      if (card.style.display === 'block') card.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+
+    // Initialize
+    (function(){ initVotes(); renderPositions(); renderResults(); const cast = loadCast(); if (Object.keys(cast).length>0) document.getElementById('resultsCard').style.display='block'; })();
+  </script>
+</body>
+</html>
